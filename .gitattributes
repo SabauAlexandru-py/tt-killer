@@ -1,0 +1,31 @@
+# Default: normalize line endings on commit; checkout native per OS.
+* text=auto eol=lf
+
+# Shell scripts must stay LF even on Windows checkouts — bash can't parse CRLF.
+*.sh    text eol=lf
+*.bash  text eol=lf
+
+# PowerShell + Windows batch scripts stay CRLF.
+*.ps1 text eol=crlf
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# Keep binary files untouched.
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.webp binary
+*.ico  binary
+*.woff binary
+*.woff2 binary
+*.ttf  binary
+*.eot  binary
+*.otf  binary
+*.zip  binary
+*.tar  binary
+*.tgz  binary
+*.gz   binary
+*.pdf  binary
+*.mp4  binary
+*.webm binary

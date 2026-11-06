@@ -1,0 +1,39 @@
+{
+  "name": "adspower-mcp-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Mission Control UI for adspower-mcp — phone-farm signup + warmup operator console.",
+  "scripts": {
+    "dev": "next dev -p 3000",
+    "build": "next build",
+    "start": "next start -p 3000",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.59.0",
+    "clsx": "^2.1.1",
+    "cmdk": "^1.0.4",
+    "lucide-react": "^0.456.0",
+    "next": "^15.1.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "sonner": "^1.5.0",
+    "tailwind-merge": "^2.5.4"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.0.0-beta.6",
+    "@types/node": "^22.9.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "eslint": "^9.14.0",
+    "eslint-config-next": "^15.1.0",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^4.0.0-beta.6",
+    "typescript": "^5.6.3"
+  },
+  "packageManager": "pnpm@9.12.3",
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

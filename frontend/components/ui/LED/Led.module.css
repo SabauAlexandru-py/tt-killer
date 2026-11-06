@@ -1,0 +1,353 @@
+/* =============================================================================
+ * LED — hardware-feeling status indicator.
+ *
+ * Follows DESIGN_BRIEF_V2 §1 (color tokens), §2 (patterns), §3 (motion kick),
+ * and §8 (animation budget). Every looped keyframe mutates only `opacity` and
+ * `transform` so the compositor can own them. The rainbow-idle pattern is the
+ * ONE explicit exception from §8 — demo-mode only, color interpolates on the
+ * main thread for 8 seconds per cycle; modern browsers interpolate OKLCH
+ * natively.
+ *
+ * Reduced-motion collapses every loop to `steady` and disables the kick +
+ * pip-fill one-shots (§2 / §8 rate caps). Background-tab pause is handled by
+ * the component toggling the `.paused` class on visibilitychange.
+ * ========================================================================== */
+
+/* -----------------------------------------------------------------------------
+ * Base lens
+ * -------------------------------------------------------------------------- */
+
+.led {
+  --led-fill: oklch(0.55 0 0);
+  --led-halo: transparent;
+  --led-highlight: oklch(1 0 0 / 0.65);
+  --led-bezel: oklch(0 0 0 / 0.4);
+  --led-brightness-mul: 1;
+  --led-size: 10px;
+
+  display: inline-block;
+  flex-shrink: 0;
+  width: var(--led-size);
+  height: var(--led-size);
+  border-radius: 999px;
+  background: var(--led-fill);
+  box-shadow:
+    inset 0 1px 1px var(--led-highlight),
+    0 0 0 1px var(--led-bezel);
+  transition:
+    background-color 120ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: center;
+  /* will-change intentionally omitted on resting LEDs — only the active
+     keyframe classes promote. Setting it everywhere thrashes layer count. */
+}
+
+.ledGlow {
+  /* Adds the close + far bloom halos while preserving the inner highlight +
+     bezel. Alpha of the halo is driven per-tone (see .tone* below) and scaled
+     by --led-brightness-mul. */
+  box-shadow:
+    inset 0 1px 1px var(--led-highlight),
+    0 0 0 1px var(--led-bezel),
+    0 0 8px 1px var(--led-halo),
+    0 0 16px 2px var(--led-halo);
+}
+
+/* -----------------------------------------------------------------------------
+ * Size variants
+ * -------------------------------------------------------------------------- */
+
+.sizeXs { --led-size: 6px; }
+.sizeSm { --led-size: 8px; }
+.sizeMd { --led-size: 10px; }
+.sizeLg { --led-size: 14px; }
+
+/* -----------------------------------------------------------------------------
+ * Tone variants — bind --led-fill + --led-halo per V2 brief §1.
+ *
+ * The `calc(ALPHA * var(--led-brightness-mul))` wrapper respects the operator
+ * brightness preference without needing JS to recompute the shadow.
+ * -------------------------------------------------------------------------- */
+
+.toneIdle {
+  --led-fill: oklch(0.55 0 0);
+  --led-halo: oklch(0.55 0 0 / 0);
+}
+
+.toneRunning {
+  --led-fill: oklch(0.72 0.17 160);
+  --led-halo: oklch(0.72 0.17 160 / calc(0.55 * var(--led-brightness-mul)));
+}
+
+.toneSuccess {
+  --led-fill: oklch(0.78 0.18 150);
+  --led-halo: oklch(0.82 0.2 150 / calc(0.75 * var(--led-brightness-mul)));
+}
+
+.toneWarning {
+  --led-fill: oklch(0.78 0.17 85);
+  --led-halo: oklch(0.78 0.17 85 / calc(0.55 * var(--led-brightness-mul)));
+}
+
+.toneError {
+  --led-fill: oklch(0.65 0.22 25);
+  --led-halo: oklch(0.65 0.22 25 / calc(0.6 * var(--led-brightness-mul)));
+}
+
+.toneInfo {
+  --led-fill: oklch(0.72 0.14 220);
+  --led-halo: oklch(0.72 0.14 220 / calc(0.45 * var(--led-brightness-mul)));
+}
+
+.toneBusy {
+  --led-fill: oklch(0.74 0.17 300);
+  --led-halo: oklch(0.74 0.17 300 / calc(0.55 * var(--led-brightness-mul)));
+}
+
+.tonePending {
+  --led-fill: oklch(0.62 0.05 240);
+  --led-halo: oklch(0.62 0.05 240 / calc(0.25 * var(--led-brightness-mul)));
+}
+
+/* -----------------------------------------------------------------------------
+ * Pattern animations — opacity + transform only (plus rainbow-idle, §8 exempt).
+ * -------------------------------------------------------------------------- */
+
+.patternSteady {
+  animation: none;
+  opacity: 1;
+}
+
+/* ----- pulse (running) — 1800ms, V2 brief §2 canonical ------------------ */
+@keyframes ledPulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.45;
+    transform: scale(0.94);
+  }
+}
+.patternPulse {
+  animation: ledPulse 1800ms cubic-bezier(0.32, 0.72, 0, 1) infinite;
+  will-change: opacity, transform;
+}
+
+/* ----- slow-pulse (warming) — 3200ms, gentler ---------------------------- */
+@keyframes ledSlowPulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(0.96);
+  }
+}
+.patternSlowPulse {
+  animation: ledSlowPulse 3200ms cubic-bezier(0.32, 0.72, 0, 1) infinite;
+  will-change: opacity, transform;
+}
+
+/* ----- fast-blink (error) — 420ms, steps(2) binary feel ----------------- */
+@keyframes ledFastBlink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0.1;
+  }
+}
+.patternFastBlink {
+  animation: ledFastBlink 420ms steps(2, end) infinite;
+  will-change: opacity;
+}
+
+/* ----- breathing (fleet idle / bridge connected) — 4200ms --------------- */
+@keyframes ledBreathing {
+  0%,
+  100% {
+    opacity: 0.85;
+    transform: scale(0.98);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+}
+.patternBreathing {
+  animation: ledBreathing 4200ms cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  will-change: opacity, transform;
+}
+
+/* ----- strobe (captcha) — 180ms steps(2), capped to 6 cycles ------------ */
+/* After 6 cycles the animation stops (CSS cap) and the component swaps the
+ * class to fast-blink via its JS-level fallback (epilepsy guard, brief §2). */
+@keyframes ledStrobe {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+.patternStrobe {
+  animation: ledStrobe 180ms steps(2) 6;
+  animation-fill-mode: forwards;
+  will-change: opacity;
+}
+
+/* ----- heartbeat (AdsPower bridge reachable) — 1400ms double-thump ------ */
+@keyframes ledHeartbeat {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  14% {
+    opacity: 1;
+    transform: scale(1.12);
+  }
+  28% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  42% {
+    opacity: 0.55;
+    transform: scale(0.94);
+  }
+  56% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.patternHeartbeat {
+  animation: ledHeartbeat 1400ms cubic-bezier(0.7, 0, 0.3, 1) infinite;
+  will-change: opacity, transform;
+}
+
+/* ----- rainbow-idle (demo mode only) — 8s hue sweep, §8 exemption ------- */
+@keyframes ledRainbowIdle {
+  0% {
+    background-color: oklch(0.72 0.17 160);
+  }
+  20% {
+    background-color: oklch(0.72 0.14 220);
+  }
+  40% {
+    background-color: oklch(0.74 0.17 300);
+  }
+  60% {
+    background-color: oklch(0.65 0.22 25);
+  }
+  80% {
+    background-color: oklch(0.78 0.17 85);
+  }
+  100% {
+    background-color: oklch(0.72 0.17 160);
+  }
+}
+.patternRainbowIdle {
+  animation: ledRainbowIdle 8000ms linear infinite;
+}
+
+/* -----------------------------------------------------------------------------
+ * led-kick: one-shot overshoot fired on tone/pattern change (brief §3).
+ * The component toggles this class, forces a reflow, and re-adds it to replay.
+ * -------------------------------------------------------------------------- */
+
+@keyframes ledKick {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.25);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.kick {
+  animation: ledKick 220ms cubic-bezier(0.34, 1.56, 0.64, 1) 1;
+}
+
+/* -----------------------------------------------------------------------------
+ * ProgressLED — row of pips. Current pip pulses; completed pips glow steady
+ * at success tone; upcoming pips sit idle. The pip that JUST transitioned to
+ * completed replays the `pipFill` overshoot (brief §3 `progress-pip-fill`).
+ * -------------------------------------------------------------------------- */
+
+.progress {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.progressCount {
+  margin-left: 6px;
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 11px;
+  color: var(--text-secondary, oklch(0.72 0 0));
+  letter-spacing: 0.01em;
+}
+
+@keyframes pipFill {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.4;
+  }
+  60% {
+    transform: scale(1.14);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+.pipJustFilled {
+  animation: pipFill 280ms cubic-bezier(0.34, 1.56, 0.64, 1) 1;
+}
+
+/* -----------------------------------------------------------------------------
+ * Reduced-motion collapse (§2 / §8).
+ *
+ * Loops → steady. One-shots (kick, pipFill, strobe, fast-blink) → no-ops.
+ * The base transition stays enabled so state changes still cross-fade softly.
+ * -------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .patternPulse,
+  .patternSlowPulse,
+  .patternBreathing,
+  .patternHeartbeat,
+  .patternRainbowIdle,
+  .patternFastBlink,
+  .patternStrobe {
+    animation: none;
+    opacity: 1;
+    transform: none;
+    will-change: auto;
+  }
+  .kick,
+  .pipJustFilled {
+    animation: none;
+  }
+}
+
+/* -----------------------------------------------------------------------------
+ * Background-tab pause — brief §8 rate caps. Component toggles this when
+ * document.hidden flips. No animation state replays on resume.
+ * -------------------------------------------------------------------------- */
+
+.paused {
+  animation-play-state: paused !important;
+}

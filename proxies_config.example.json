@@ -1,0 +1,5 @@
+{
+  "__comment": "Map AdsPower proxy_id -> the mobile-proxy provider's rotation URL. Copy this file to proxies_config.json and fill in your real rotation URLs. Run list_proxies in the MCP to discover your proxy_ids.",
+  "proxy_abc123": "https://iproxy.online/api/v1/connections/XXXXX/changeIp?token=YYYYY",
+  "proxy_def456": "https://changeip.example.com/rotate?session=ZZZZZ"
+}

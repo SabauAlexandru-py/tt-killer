@@ -1,0 +1,83 @@
+# ─── Python ──────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+.env.local
+.pytest_cache/
+.ruff_cache/
+dist/
+build/
+screenshots/
+state/
+.coverage
+htmlcov/
+
+# ─── Backend runtime ─────────────────────────────────────────────────────────
+backend/.venv
+backend/data/
+backend/.env
+
+# ─── Frontend (Next.js + pnpm) ───────────────────────────────────────────────
+frontend/node_modules
+frontend/.next
+frontend/.env.local
+frontend/.env
+
+# ─── Monorepo root ───────────────────────────────────────────────────────────
+node_modules
+.logs/
+
+# ─── OS junk ─────────────────────────────────────────────────────────────────
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# ─── Editors / IDEs ──────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.sublime-workspace
+*.sublime-project
+*.swp
+*.swo
+*.swn
+.project
+.classpath
+.settings/
+.history/
+
+# ─── Logs ────────────────────────────────────────────────────────────────────
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*

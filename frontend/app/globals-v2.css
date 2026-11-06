@@ -1,0 +1,550 @@
+/* ---------------------------------------------------------------------------
+ * adspower-mcp Mission Control — globals-v2.css
+ *
+ * V2 (DESIGN_BRIEF_V2.md) additions layered on top of globals.css. The V1
+ * tokens stay untouched — this sheet only adds:
+ *
+ *   • LED color + glow tokens (§1)                       → --led-*
+ *   • Motion tokens (§3)                                 → --ease-*, --dur-*
+ *   • Per-preset duration/easing CSS variables (§3)      → --motion-<name>-*
+ *   • @keyframes for every looped and one-shot animation
+ *   • `.motion` utility classes that attach the CSS vars to keyframes
+ *   • `.led` + `.led--<state>` renderer primitives
+ *   • `prefers-reduced-motion` and `document.hidden` overrides (§8)
+ *
+ * Every CSS variable here is mirrored in frontend/lib/motion.ts so a
+ * component can reach for either surface and get the same curve. Keep them
+ * in sync — the rule is: brief → both files, same commit.
+ * ------------------------------------------------------------------------- */
+
+:root {
+  /* ----- V2 motion tokens ------------------------------------------------ */
+  --ease-overshoot: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-anticip:   cubic-bezier(0.68, -0.4, 0.32, 1.4);
+  --ease-elastic:   cubic-bezier(0.34, 1.56, 0.64, 1); /* alias — overshoot */
+  --ease-spring:    cubic-bezier(0.22, 1.2, 0.36, 1);  /* soft-landing settle */
+
+  --dur-quick: 80ms;
+
+  /* ----- Per-preset vars (consumed by the @keyframes below) -------------- */
+  --motion-card-enter-duration:       320ms;
+  --motion-card-enter-easing:         var(--ease-out);
+  --motion-card-hover-duration:       180ms;
+  --motion-card-hover-easing:         var(--ease-out);
+  --motion-card-press-duration:       var(--dur-quick);
+  --motion-card-press-easing:         var(--ease-out);
+  --motion-row-ripple-duration:       400ms;
+  --motion-row-ripple-easing:         var(--ease-smooth);
+  --motion-success-flash-duration:    480ms;
+  --motion-success-flash-easing:      var(--ease-smooth);
+  --motion-error-shake-duration:      320ms;
+  --motion-error-shake-easing:        linear;
+  --motion-metric-count-up-duration:  600ms;
+  --motion-metric-count-up-easing:    var(--ease-out);
+  --motion-inspector-slide-duration:  260ms;
+  --motion-inspector-slide-easing:    var(--ease-smooth);
+  --motion-nav-collapse-duration:     220ms;
+  --motion-nav-collapse-easing:       var(--ease-smooth);
+  --motion-tab-indicator-duration:    260ms;
+  --motion-tab-indicator-easing:      var(--ease-smooth);
+  --motion-progress-pip-duration:     280ms;
+  --motion-progress-pip-easing:       var(--ease-overshoot);
+  --motion-toast-enter-duration:      260ms;
+  --motion-toast-enter-easing:        var(--ease-out);
+  --motion-screenshot-expand-duration: 320ms;
+  --motion-screenshot-expand-easing:  var(--ease-out);
+  --motion-log-line-enter-duration:   120ms;
+  --motion-log-line-enter-easing:     linear;
+  --motion-focus-ring-in-duration:    120ms;
+  --motion-focus-ring-in-easing:      var(--ease-out);
+  --motion-led-kick-duration:         220ms;
+  --motion-led-kick-easing:           var(--ease-overshoot);
+
+  /* ----- LED tokens — §1 of the brief ----------------------------------- */
+  --led-idle:        oklch(0.55 0.00 0);
+  --led-running:     oklch(0.72 0.17 160);
+  --led-success:     oklch(0.78 0.18 150);
+  --led-warning:     oklch(0.78 0.17 85);
+  --led-error:       oklch(0.65 0.22 25);
+  --led-info:        oklch(0.72 0.14 220);
+  --led-busy:        oklch(0.74 0.17 300);
+  --led-pending:     oklch(0.62 0.05 240);
+
+  --led-idle-glow:     oklch(0.55 0.00 0   / 0.00);
+  --led-running-glow:  oklch(0.72 0.17 160 / 0.55);
+  --led-success-glow:  oklch(0.82 0.20 150 / 0.75);
+  --led-warning-glow:  oklch(0.78 0.17 85  / 0.55);
+  --led-error-glow:    oklch(0.65 0.22 25  / 0.60);
+  --led-info-glow:     oklch(0.72 0.14 220 / 0.45);
+  --led-busy-glow:     oklch(0.74 0.17 300 / 0.55);
+  --led-pending-glow:  oklch(0.62 0.05 240 / 0.25);
+
+  --led-highlight:   oklch(1.0 0 0 / 0.65);
+
+  /* Brightness multiplier — Settings → LED brightness (§9). Soft 0.7,
+   * Normal 1.0, Bright 1.4. Set at :root via JS; keyframes multiply through
+   * `calc()` so a single toggle rescales every glow instantly. */
+  --led-brightness: 1;
+}
+
+/* ===========================================================================
+ * Keyframes — one definition per named preset (motion.ts counterparts).
+ * ======================================================================== */
+
+/* ---- cardEnter ----------------------------------------------------------- */
+@keyframes motion-card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ---- cardHover (hover is CSS :hover + transition; this is the explicit
+ *       keyframe fallback for data-driven callers that use JS to toggle
+ *       .is-hovered — rare). ------------------------------------------------ */
+@keyframes motion-card-hover {
+  from {
+    transform: translateY(0);
+    border-color: var(--border);
+    box-shadow: 0 0 0 0 oklch(0 0 0 / 0);
+  }
+  to {
+    transform: translateY(-2px);
+    border-color: var(--border-strong);
+    box-shadow: 0 6px 20px oklch(0 0 0 / 0.35);
+  }
+}
+
+/* ---- cardPress — pressed-in snap. ---------------------------------------- */
+@keyframes motion-card-press {
+  from { transform: scale(1); }
+  to   { transform: scale(0.985); }
+}
+
+/* ---- rowRipple — SSE data update flash. ---------------------------------- */
+@keyframes motion-row-ripple {
+  0%, 100% { background-color: transparent; }
+  30%      { background-color: var(--accent-bg); }
+  60%      { background-color: var(--accent-bg); }
+}
+
+/* ---- successFlash — row celebration on run complete. --------------------- */
+@keyframes motion-success-flash {
+  0% {
+    background-color: transparent;
+    border-color: var(--border);
+  }
+  15% {
+    background-color: var(--accent-bg);
+    border-color: var(--accent-border);
+  }
+  70% {
+    background-color: var(--accent-bg);
+    border-color: var(--accent-border);
+  }
+  100% {
+    background-color: transparent;
+    border-color: var(--border);
+  }
+}
+
+/* ---- errorShake — form input error, 5-sample keyframe. ------------------- */
+@keyframes motion-error-shake {
+  0%   { transform: translateX(0); }
+  25%  { transform: translateX(-4px); }
+  50%  { transform: translateX(4px); }
+  75%  { transform: translateX(-2px); }
+  100% { transform: translateX(0); }
+}
+
+/* ---- inspectorSlide — right drawer entry. -------------------------------- */
+@keyframes motion-inspector-slide {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* ---- navCollapse — the ONE width animation allowed (§8). ----------------- */
+@keyframes motion-nav-expand {
+  from { width: var(--nav-width-collapsed); }
+  to   { width: var(--nav-width); }
+}
+@keyframes motion-nav-contract {
+  from { width: var(--nav-width); }
+  to   { width: var(--nav-width-collapsed); }
+}
+
+/* ---- tabIndicator — FLIP-style underline slide. -------------------------- */
+@keyframes motion-tab-indicator {
+  from {
+    transform: translateX(var(--tab-from, 0)) scaleX(var(--tab-scale-from, 1));
+  }
+  to {
+    transform: translateX(var(--tab-to, 0)) scaleX(var(--tab-scale-to, 1));
+  }
+}
+
+/* ---- progress-pip-fill — per-step progress dots. ------------------------- */
+@keyframes motion-progress-pip-fill {
+  0% {
+    background-color: var(--bg-raised);
+    transform: scale(1);
+  }
+  80% {
+    background-color: var(--accent);
+    transform: scale(1.18);
+  }
+  100% {
+    background-color: var(--accent);
+    transform: scale(1);
+  }
+}
+
+/* ---- toastEnter — bottom-right notification tray. ------------------------ */
+@keyframes motion-toast-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ---- screenshotExpand — thumb hover grows. ------------------------------- */
+@keyframes motion-screenshot-expand {
+  from {
+    transform: scale(1);
+    border-radius: 6px;
+  }
+  to {
+    transform: scale(1.75);
+    border-radius: 10px;
+  }
+}
+
+/* ---- logLineEnter — trailing fade in the log stream. --------------------- */
+@keyframes motion-log-line-enter {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ---- focusRingIn — focus ring materializes rather than hard-pops. -------- */
+@keyframes motion-focus-ring-in {
+  from {
+    outline-offset: 0;
+    outline-color: oklch(0.72 0.17 160 / 0);
+  }
+  to {
+    outline-offset: 2px;
+    outline-color: var(--border-focus);
+  }
+}
+
+/* ===========================================================================
+ * LED keyframes — §2 of the brief. Each pattern binds to a status class.
+ * ======================================================================== */
+
+/* steady is the absence of animation; no keyframe needed. */
+
+@keyframes keyframe-led-pulse {
+  0%, 100% {
+    opacity: 1;
+    box-shadow:
+      inset 0 1px 1px var(--led-highlight),
+      0 0 0 1px oklch(0 0 0 / 0.40),
+      0 0 calc(10px * var(--led-brightness)) calc(2px * var(--led-brightness)) var(--led-halo, transparent);
+  }
+  50% {
+    opacity: 0.45;
+    box-shadow:
+      inset 0 1px 1px var(--led-highlight),
+      0 0 0 1px oklch(0 0 0 / 0.40),
+      0 0 calc(4px * var(--led-brightness)) 1px var(--led-halo, transparent);
+  }
+}
+
+@keyframes keyframe-led-slow-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.60; }
+}
+
+@keyframes keyframe-led-fast-blink {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.10; }
+}
+
+@keyframes keyframe-led-breathing {
+  0%, 100% {
+    opacity: 0.85;
+    box-shadow:
+      inset 0 1px 1px var(--led-highlight),
+      0 0 0 1px oklch(0 0 0 / 0.40),
+      0 0 calc(6px * var(--led-brightness)) 1px var(--led-halo, transparent);
+  }
+  50% {
+    opacity: 1;
+    box-shadow:
+      inset 0 1px 1px var(--led-highlight),
+      0 0 0 1px oklch(0 0 0 / 0.40),
+      0 0 calc(12px * var(--led-brightness)) 3px var(--led-halo, transparent);
+  }
+}
+
+@keyframes keyframe-led-strobe {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0; }
+}
+
+@keyframes keyframe-led-heartbeat {
+  0%, 20%, 40%, 100% { opacity: 1; }
+  10%, 30%           { opacity: 0.55; }
+}
+
+@keyframes keyframe-led-rainbow-idle {
+  0%   { background: oklch(0.72 0.17 160); }
+  20%  { background: oklch(0.72 0.17 220); }
+  40%  { background: oklch(0.72 0.17 300); }
+  60%  { background: oklch(0.72 0.17 25);  }
+  80%  { background: oklch(0.72 0.17 85);  }
+  100% { background: oklch(0.72 0.17 160); }
+}
+
+@keyframes keyframe-led-kick {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
+
+@keyframes keyframe-success-flash {
+  0%   { box-shadow: 0 0 0 0 var(--led-success-glow); }
+  40%  { box-shadow: 0 0 20px 6px var(--led-success-glow); }
+  100% { box-shadow: 0 0 0 0 oklch(0 0 0 / 0); }
+}
+
+/* ===========================================================================
+ * Motion utility classes — a component attaches `.motion.motion--<name>` and
+ * the animation runs with the per-preset duration/easing vars above. Every
+ * class is idempotent: adding it again restarts the animation only when the
+ * component bumps a `key` prop or toggles the class off/on.
+ * ======================================================================== */
+
+.motion {
+  animation-fill-mode: both;
+  animation-iteration-count: 1;
+  will-change: transform, opacity;
+}
+
+.motion--card-enter {
+  animation-name: motion-card-enter;
+  animation-duration: var(--motion-card-enter-duration);
+  animation-timing-function: var(--motion-card-enter-easing);
+}
+
+.motion--card-press {
+  animation-name: motion-card-press;
+  animation-duration: var(--motion-card-press-duration);
+  animation-timing-function: var(--motion-card-press-easing);
+}
+
+.motion--row-ripple {
+  animation-name: motion-row-ripple;
+  animation-duration: var(--motion-row-ripple-duration);
+  animation-timing-function: var(--motion-row-ripple-easing);
+}
+
+.motion--success-flash {
+  animation-name: motion-success-flash;
+  animation-duration: var(--motion-success-flash-duration);
+  animation-timing-function: var(--motion-success-flash-easing);
+}
+
+.motion--error-shake {
+  animation-name: motion-error-shake;
+  animation-duration: var(--motion-error-shake-duration);
+  animation-timing-function: var(--motion-error-shake-easing);
+}
+
+.motion--inspector-slide {
+  animation-name: motion-inspector-slide;
+  animation-duration: var(--motion-inspector-slide-duration);
+  animation-timing-function: var(--motion-inspector-slide-easing);
+}
+
+.motion--nav-expand {
+  animation-name: motion-nav-expand;
+  animation-duration: var(--motion-nav-collapse-duration);
+  animation-timing-function: var(--motion-nav-collapse-easing);
+}
+
+.motion--nav-contract {
+  animation-name: motion-nav-contract;
+  animation-duration: var(--motion-nav-collapse-duration);
+  animation-timing-function: var(--motion-nav-collapse-easing);
+}
+
+.motion--toast-enter {
+  animation-name: motion-toast-enter;
+  animation-duration: var(--motion-toast-enter-duration);
+  animation-timing-function: var(--motion-toast-enter-easing);
+}
+
+.motion--log-line-enter {
+  animation-name: motion-log-line-enter;
+  animation-duration: var(--motion-log-line-enter-duration);
+  animation-timing-function: var(--motion-log-line-enter-easing);
+}
+
+.motion--progress-pip-fill {
+  animation-name: motion-progress-pip-fill;
+  animation-duration: var(--motion-progress-pip-duration);
+  animation-timing-function: var(--motion-progress-pip-easing);
+}
+
+.motion--screenshot-expand {
+  animation-name: motion-screenshot-expand;
+  animation-duration: var(--motion-screenshot-expand-duration);
+  animation-timing-function: var(--motion-screenshot-expand-easing);
+}
+
+.motion--led-kick {
+  animation-name: keyframe-led-kick;
+  animation-duration: var(--motion-led-kick-duration);
+  animation-timing-function: var(--motion-led-kick-easing);
+}
+
+/* ===========================================================================
+ * LED primitive — one circle, eight patterns.
+ * ======================================================================== */
+
+.led {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  display: inline-block;
+  flex-shrink: 0;
+  background: var(--led-fill, var(--led-idle));
+  box-shadow:
+    inset 0 1px 1px var(--led-highlight),
+    0 0 0 1px oklch(0 0 0 / 0.40),
+    0 0 calc(8px * var(--led-brightness))  1px var(--led-halo, transparent),
+    0 0 calc(16px * var(--led-brightness)) 2px var(--led-halo, transparent);
+  transition:
+    background 120ms var(--ease-out),
+    box-shadow 220ms var(--ease-out);
+  --led-fill: var(--led-idle);
+  --led-halo: var(--led-idle-glow);
+}
+
+.led--idle     { --led-fill: var(--led-idle);    --led-halo: var(--led-idle-glow); }
+.led--running  { --led-fill: var(--led-running); --led-halo: var(--led-running-glow); animation: keyframe-led-pulse 1800ms var(--ease-smooth) infinite; }
+.led--success  { --led-fill: var(--led-success); --led-halo: var(--led-success-glow); }
+.led--warning  { --led-fill: var(--led-warning); --led-halo: var(--led-warning-glow); animation: keyframe-led-slow-pulse 3200ms var(--ease-smooth) infinite; }
+.led--error    { --led-fill: var(--led-error);   --led-halo: var(--led-error-glow);   animation: keyframe-led-fast-blink 420ms steps(2, end) infinite; }
+.led--info     { --led-fill: var(--led-info);    --led-halo: var(--led-info-glow); }
+.led--busy     { --led-fill: var(--led-busy);    --led-halo: var(--led-busy-glow);    animation: keyframe-led-pulse 1800ms var(--ease-smooth) infinite; }
+.led--pending  { --led-fill: var(--led-pending); --led-halo: var(--led-pending-glow); }
+.led--breathing { --led-fill: var(--led-running); --led-halo: var(--led-running-glow); animation: keyframe-led-breathing 4200ms cubic-bezier(.4,0,.6,1) infinite; }
+.led--heartbeat { --led-fill: var(--led-info);    --led-halo: var(--led-info-glow);    animation: keyframe-led-heartbeat 1400ms cubic-bezier(.7,0,.3,1) infinite; }
+.led--strobe    { --led-fill: var(--led-warning); --led-halo: var(--led-warning-glow); animation: keyframe-led-strobe 180ms steps(2) 6, keyframe-led-fast-blink 420ms steps(2, end) infinite 1.08s; }
+.led--rainbow   { animation: keyframe-led-rainbow-idle 8000ms linear infinite; }
+
+/* ===========================================================================
+ * Account row — left-edge amber pulse while an account is running.
+ *
+ * The run-detail per-account list wants a wall-clock-feeling "this row is
+ * doing work" signal that reads from across the room. A 3px transparent
+ * left border is always present so the row never reflows when the pulse
+ * kicks in; adding `.is-running` animates border-left-color between
+ * `--warn` and `--warn-border` on the same 1800ms cadence as the LED
+ * `pulse` pattern so the whole row breathes at one tempo.
+ *
+ * Padding-left on the consuming row (`.account-row` consumer in
+ * AccountRow.tsx) drops from 20px → 17px so the content gutter is still
+ * 20px to the character, pulse on or off.
+ * ======================================================================== */
+
+@keyframes keyframe-account-row-pulse {
+  0%, 100% { border-left-color: var(--warn); }
+  50%      { border-left-color: var(--warn-border); }
+}
+
+.account-row {
+  border-left: 3px solid transparent;
+}
+
+.account-row.is-running {
+  border-left-color: var(--warn);
+  animation: keyframe-account-row-pulse 1800ms var(--ease-smooth) infinite;
+}
+
+/* ===========================================================================
+ * Backgrounded tab — pause every infinite animation so hidden tabs don't
+ * eat CPU. The browser already throttles rAF, but CSS loops keep ticking.
+ * ======================================================================== */
+
+@media (prefers-reduced-motion: no-preference) {
+  /* No-op — the default state. Declared explicitly so the reduced-motion
+   * override below has a symmetric partner for tooling (lint, visual regression). */
+}
+
+/* ===========================================================================
+ * Reduced motion override (§8 of the brief)
+ *   • All looped animations collapse to steady.
+ *   • One-shots become a 120ms opacity cross-fade.
+ *   • error-shake, strobe, fast-blink, card-press become no-ops.
+ * ======================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .motion,
+  .motion--card-enter,
+  .motion--row-ripple,
+  .motion--success-flash,
+  .motion--inspector-slide,
+  .motion--nav-expand,
+  .motion--nav-contract,
+  .motion--toast-enter,
+  .motion--log-line-enter,
+  .motion--progress-pip-fill,
+  .motion--screenshot-expand {
+    animation-duration: 120ms !important;
+    animation-timing-function: var(--ease-out) !important;
+    animation-name: motion-log-line-enter !important;
+  }
+
+  .motion--card-press,
+  .motion--error-shake,
+  .motion--led-kick {
+    animation: none !important;
+  }
+
+  .led,
+  .led--running,
+  .led--warning,
+  .led--error,
+  .led--busy,
+  .led--breathing,
+  .led--heartbeat,
+  .led--strobe,
+  .led--rainbow {
+    animation: none !important;
+    transition:
+      background 220ms var(--ease-out),
+      box-shadow 220ms var(--ease-out) !important;
+  }
+
+  .account-row.is-running {
+    animation: none !important;
+    border-left-color: var(--warn);
+  }
+}

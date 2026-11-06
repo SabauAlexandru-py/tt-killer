@@ -1,0 +1,240 @@
+@import "tailwindcss";
+@import "./globals-v2.css";
+
+/* ---------------------------------------------------------------------------
+ * adspower-mcp Mission Control — globals.css
+ *
+ * All tokens are OKLCH. Fonts (Geist Sans + Geist Mono) are loaded through
+ * next/font in app/layout.tsx and exposed as --font-geist-sans and
+ * --font-geist-mono. The CSS-level variables --font-sans / --font-mono wrap
+ * those with proper fallbacks so components and utilities can consume a
+ * single stable name.
+ * ------------------------------------------------------------------------- */
+
+:root {
+  /* ---- Colors — dark mode primary, all OKLCH ---------------------------- */
+  --bg-base:         oklch(0.145 0 0);
+  --bg-surface:      oklch(0.19 0 0);
+  --bg-raised:       oklch(0.22 0 0);
+  --bg-hover:        oklch(0.24 0 0);
+
+  --border:          oklch(0.28 0 0);
+  --border-strong:   oklch(0.35 0 0);
+  --border-focus:    oklch(0.72 0.17 160);
+
+  --text-primary:    oklch(0.98 0 0);
+  --text-secondary:  oklch(0.72 0 0);
+  --text-muted:      oklch(0.55 0 0);
+
+  --accent:          oklch(0.72 0.17 160);
+  --accent-bg:       oklch(0.72 0.17 160 / 0.12);
+  --accent-border:   oklch(0.72 0.17 160 / 0.30);
+
+  --warn:            oklch(0.78 0.17 85);
+  --warn-bg:         oklch(0.78 0.17 85 / 0.12);
+  --warn-border:     oklch(0.78 0.17 85 / 0.30);
+
+  --error:           oklch(0.65 0.22 25);
+  --error-bg:        oklch(0.65 0.22 25 / 0.12);
+  --error-border:    oklch(0.65 0.22 25 / 0.30);
+
+  --info:            oklch(0.72 0.14 220);
+  --info-bg:         oklch(0.72 0.14 220 / 0.12);
+  --info-border:    oklch(0.72 0.14 220 / 0.30);
+
+  /* ---- Typography ------------------------------------------------------- */
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system,
+               "Segoe UI", Roboto, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo,
+               Consolas, monospace;
+
+  /* "size / line-height" pairs — pass directly to the font shorthand or
+   * split via calc()/var() when a component needs just the size. */
+  --text-body:        13px / 1.5;
+  --text-label:       12px / 1.4;
+  --text-heading-sm:  14px / 1.4;
+  --text-heading-md:  16px / 1.3;
+  --text-heading-lg:  20px / 1.2;
+  --text-display:     32px / 1.1;
+  --text-mono-data:   12px / 1.5;
+  --text-mono-log:    11px / 1.45;
+
+  /* ---- Spacing scale (4px micro / 8px macro) ---------------------------- */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* ---- Row / control heights ------------------------------------------- */
+  --row-table:         36px;
+  --row-table-dense:   32px;
+  --row-nav:           36px;
+  --row-input:         36px;
+  --row-button:        36px;
+  --row-button-sm:     32px;
+  --row-button-primary: 44px;
+
+  /* ---- Radii ----------------------------------------------------------- */
+  --radius-sm: 4px;
+  --radius:    6px;
+  --radius-lg: 8px;
+
+  /* ---- Motion ---------------------------------------------------------- */
+  --ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-smooth: cubic-bezier(0.32, 0.72, 0, 1);
+  --dur-fast:    120ms;
+  --dur-normal:  220ms;
+  --dur-slow:    380ms;
+
+  /* ---- Layout ---------------------------------------------------------- */
+  --nav-width:         240px;
+  --nav-width-collapsed: 56px;
+  --inspector-width:   360px;
+  --topbar-height:     48px;
+}
+
+/* ---------------------------------------------------------------------------
+ * Pulse — live status dots only. 2s loop. Never idle.
+ * ------------------------------------------------------------------------- */
+
+@keyframes pulse {
+  0%   { transform: scale(1);   opacity: 1; }
+  50%  { transform: scale(1.3); opacity: 0; }
+  100% { transform: scale(1);   opacity: 1; }
+}
+
+/* ---------------------------------------------------------------------------
+ * Base elements
+ * ------------------------------------------------------------------------- */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.5;
+  font-feature-settings: "cv11", "ss01";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  min-height: 100dvh;
+  overflow-x: hidden;
+}
+
+*:focus {
+  outline: none;
+}
+
+*:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+::selection {
+  background: var(--accent-bg);
+  color: var(--text-primary);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+input,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+hr {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 0;
+}
+
+code,
+kbd,
+pre,
+samp {
+  font-family: var(--font-mono);
+}
+
+/* ---------------------------------------------------------------------------
+ * Scrollbars — thin, data-terminal
+ * ------------------------------------------------------------------------- */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+  border-left: 1px solid var(--border);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border: 2px solid var(--bg-base);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* ---------------------------------------------------------------------------
+ * Utility classes — mono numeric readouts
+ * ------------------------------------------------------------------------- */
+
+.font-mono-data {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "zero" 1, "cv11";
+}
+
+.font-mono-log {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.45;
+  font-variant-numeric: tabular-nums;
+}

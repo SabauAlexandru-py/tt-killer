@@ -1,0 +1,26 @@
+{
+  "name": "adspower-mcp-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Mission Control monorepo — FastAPI bridge (backend) + Next.js 15 operator UI (frontend) over the adspower_mcp Python package.",
+  "scripts": {
+    "dev": "concurrently -n backend,frontend -c green,cyan \"pnpm dev:backend\" \"pnpm dev:frontend\"",
+    "dev:backend": "cd backend && (command -v uv >/dev/null 2>&1 && uv run uvicorn backend.main:app --reload --port 8080 --host 127.0.0.1 || .venv/bin/uvicorn backend.main:app --reload --port 8080 --host 127.0.0.1)",
+    "dev:frontend": "cd frontend && pnpm dev",
+    "build": "pnpm --filter ./frontend build",
+    "start": "pnpm --filter ./frontend start",
+    "lint": "pnpm --filter ./frontend lint",
+    "typecheck": "pnpm --filter ./frontend typecheck",
+    "install:all": "pnpm install:backend && pnpm install:frontend",
+    "install:backend": "cd backend && (command -v uv >/dev/null 2>&1 && uv sync --extra dev || python -m venv .venv && .venv/bin/pip install -e .[dev])",
+    "install:frontend": "cd frontend && pnpm install",
+    "clean": "rm -rf frontend/.next frontend/node_modules backend/.venv backend/data/*.json.tmp"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  },
+  "packageManager": "pnpm@9.12.3",
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
